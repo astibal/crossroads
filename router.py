@@ -31,6 +31,7 @@ if secrets.config()["insecure"]:
 @app.route("/github/login")
 def github_login():
     session['referer'] = request.referrer
+    session['args'] = request.args
 
     if not routing.cfg_github:
         return "Service not available"
@@ -94,6 +95,7 @@ def github_callback():
 @app.route('/google/login')
 def google_login():
     session['referer'] = request.referrer
+    session['args'] = request.args
 
     if not routing.cfg_google:
         return "Service not available"
@@ -173,6 +175,7 @@ def index():
     </ul>
     """
 
+
 if __name__ == "__main__":
     app.debug = True
-    app.run()
+    app.run(host='0.0.0.0')

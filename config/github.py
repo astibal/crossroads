@@ -33,4 +33,8 @@ def collect_info(oauth_session):
         "referer": session['referer'],
     }
 
+    # add optionally arguments from initial get
+    if 'args' in session.keys():
+        package['args'] = session['args']
+
     return package
