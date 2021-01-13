@@ -1,3 +1,10 @@
+
+from flask import request, session
+
+REALM = "github"
+INFO_URL = 'https://api.github.com/user'
+
+
 def config():
     import os
     try:
@@ -10,3 +17,20 @@ def config():
     except KeyError as e:
         pass
     return {}
+
+
+def collect_info(oauth_session):
+    info = oauth_session.get(INFO_URL)
+    if info.status_code < 200 or info.status_code > 299:
+        raise ConnectionError("bad response")
+
+    ip = request.remote_addr
+
+    package = {
+        "info": info.json(),
+        "realm": REALM,
+        "ip": ip,
+        "referer": session['referer'],
+    }
+
+    return package
