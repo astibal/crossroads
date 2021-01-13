@@ -8,6 +8,8 @@ from flask import Flask, request, redirect, session, url_for
 from flask.json import jsonify
 
 from config import github
+from config import google
+
 from config import secrets
 from config import callbacks
 
@@ -15,6 +17,7 @@ from config import callbacks
 class CrossRoads:
     def __init__(self):
         self.cfg_github = github.config()
+        self.cfg_google = google.config()
         self.cfg_callbacks = callbacks.config()
 
 
@@ -88,11 +91,56 @@ def github_callback():
     # return jsonify(package)
 
 
+@app.route('/google/login')
+def google_login():
+    session['referer'] = request.referrer
 
+    if not routing.cfg_google:
+        return "Service not available"
+
+    scope = ["https://www.googleapis.com/auth/userinfo.email",
+             "https://www.googleapis.com/auth/userinfo.profile"]
+
+    google_session = OAuth2Session(routing.cfg_google['client_id'],
+                                   scope=scope,
+                                   redirect_uri=routing.cfg_google['redirect_url'])
+
+    authorization_url, state = google_session.authorization_url(
+                                routing.cfg_google['authorization_base_url'],
+                                access_type='offline',
+                                prompt='select_account')
+
+    # State is used to prevent CSRF, keep this for later.
+    session['oauth_state'] = state
+    return redirect(authorization_url)
+
+
+@app.route('/google/callback')
+def google_callback():
+    google_session = OAuth2Session(
+        client_id=routing.cfg_google["client_id"],
+        state=session['oauth_state'],
+        redirect_uri=routing.cfg_google['redirect_url'])
+
+    google_session.fetch_token(
+        token_url=routing.cfg_google['token_url'],
+        client_secret=routing.cfg_google['client_secret'],
+        authorization_response=request.url)
+
+    package = google.collect_info(google_session)
+    trigger(package)
+
+    # if we came from real site, return there
+    if session['referer']:
+        return redirect(session['referer'])
+
+    return redirect("/ok")
+    # return jsonify(package)
 
 @app.route("/ok", methods=['GET'])
 def ok():
     return "OK!"
+
 
 @app.route("/error", methods=['GET'])
 def error():
@@ -116,7 +164,14 @@ def callback_input():
     return redirect("/ok")
 
 
-
+@app.route("/", methods=['GET'])
+def index():
+    return """
+    <ul>
+        <li><a href="/github/login">GitHub</a></li>
+        <li><a href="/google/login">Google</a></li>
+    </ul>
+    """
 
 if __name__ == "__main__":
     app.debug = True
