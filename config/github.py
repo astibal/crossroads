@@ -1,8 +1,10 @@
 
 from flask import request, session
 
-REALM = "github"
-INFO_URL = 'https://api.github.com/user'
+
+class GitHub:
+    REALM = "github"
+    INFO_URL = 'https://api.github.com/user'
 
 
 def config():
@@ -20,7 +22,8 @@ def config():
 
 
 def collect_info(oauth_session):
-    info = oauth_session.get(INFO_URL)
+
+    info = oauth_session.get(GitHub.INFO_URL)
     if info.status_code < 200 or info.status_code > 299:
         raise ConnectionError("bad response")
 
@@ -28,7 +31,7 @@ def collect_info(oauth_session):
 
     package = {
         "info": info.json(),
-        "realm": REALM,
+        "realm": GitHub.REALM,
         "ip": ip,
         "referer": session['referer'],
     }

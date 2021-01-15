@@ -1,10 +1,11 @@
 import os
 import requests
 import json
+import base64
 
 from requests_oauthlib import OAuth2Session
 
-from flask import Flask, request, redirect, session, url_for
+from flask import Flask, request, redirect, session, url_for, make_response
 from flask.json import jsonify
 
 from config import github
@@ -56,7 +57,12 @@ def trigger(package):
     for c in routing.cfg_callbacks:
         if c:
             data = json.dumps(package)
-            requests.post(c, json=data)
+
+            callback_session = requests.Session()
+            callback_response = callback_session.post(url=c, json=data)
+
+            return callback_response.json()
+
 
 
 @app.route("/github/callback")
@@ -79,14 +85,14 @@ def github_callback():
 
     try:
         package = github.collect_info(github_session)
-        trigger(package)
+        action = trigger(package)
+        if action['redirect_method'] == 'raw':
+            txt = base64.b64decode(action['raw']).decode('utf8')
+            return make_response(txt)
 
     except Exception as e:
+        print(e)
         return redirect('/error')
-
-    # if we came from real site, return there
-    if session['referer']:
-        return redirect(session['referer'])
 
     return redirect("/ok")
     # return jsonify(package)
@@ -132,12 +138,9 @@ def google_callback():
     package = google.collect_info(google_session)
     trigger(package)
 
-    # if we came from real site, return there
-    if session['referer']:
-        return redirect(session['referer'])
-
     return redirect("/ok")
     # return jsonify(package)
+
 
 @app.route("/ok", methods=['GET'])
 def ok():
