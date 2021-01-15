@@ -32,7 +32,10 @@ if secrets.config()["insecure"]:
 @app.route("/github/login")
 def github_login():
     session['referer'] = request.referrer
-    session['args'] = request.args
+
+    # change args only if valid (session['args'] can be already set by different means)
+    if request.args:
+        session['args'] = request.args
 
     if not routing.cfg_github:
         return "Service not available"
@@ -101,7 +104,10 @@ def github_callback():
 @app.route('/google/login')
 def google_login():
     session['referer'] = request.referrer
-    session['args'] = request.args
+
+    # change args only if valid (session['args'] can be already set by different means)
+    if request.args:
+        session['args'] = request.args
 
     if not routing.cfg_google:
         return "Service not available"
@@ -171,6 +177,9 @@ def callback_input():
 
 @app.route("/", methods=['GET'])
 def index():
+
+    session['args'] = request.args
+
     return """
     <ul>
         <li><a href="/github/login">GitHub</a></li>
