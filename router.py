@@ -67,6 +67,16 @@ def trigger(package):
             return callback_response.json()
 
 
+def create_response(package):
+
+    action = trigger(package)
+    if action['redirect_method'] == 'raw':
+        txt = base64.b64decode(action['raw']).decode('utf8')
+        return make_response(txt)
+
+    else:
+        return redirect('/error')
+
 
 @app.route("/github/callback")
 def github_callback():
@@ -88,18 +98,11 @@ def github_callback():
 
     try:
         package = github.collect_info(github_session)
-        action = trigger(package)
-        if action['redirect_method'] == 'raw':
-            txt = base64.b64decode(action['raw']).decode('utf8')
-            return make_response(txt)
+        return create_response(package)
 
     except Exception as e:
         print(e)
         return redirect('/error')
-
-    return redirect("/ok")
-    # return jsonify(package)
-
 
 @app.route('/google/login')
 def google_login():
@@ -142,10 +145,7 @@ def google_callback():
         authorization_response=request.url)
 
     package = google.collect_info(google_session)
-    trigger(package)
-
-    return redirect("/ok")
-    # return jsonify(package)
+    return create_response(package)
 
 
 @app.route("/ok", methods=['GET'])
